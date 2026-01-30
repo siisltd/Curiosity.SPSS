@@ -28,7 +28,7 @@ namespace Curiosity.SPSS.FileParser
 			_writer = new BinaryWriter(_output, Constants.BaseEncoding, leaveOpen);
 		}
 		 
-	    public void WriteFileHeader(SpssOptions options, IEnumerable<Variable> variables)
+	    public void WriteFileHeader(SpssOptions options, IEnumerable<Variable> variables, IEnumerable<Mrset> mrsets)
 		{
 		    _options = options;
 			_compress = options.Compressed;
@@ -55,6 +55,11 @@ namespace Curiosity.SPSS.FileParser
             var fltInfoRecord = new MachineFloatingPointInfoRecord();
             headerRecords.Add(fltInfoRecord);
 
+            foreach (var mrset in mrsets)
+            {
+				headerRecords.Add(new MrsetRecord(options.DataEncoding, mrset));
+            }
+            
             // Variable Display info, beware that the number of variables here must match the count of named variables 
             // (exclude the string continuation, include VLS segments)
 	        var varDisplRecord = new VariableDisplayParameterRecord(displayInfoList.Count);
@@ -83,13 +88,13 @@ namespace Curiosity.SPSS.FileParser
 			
 			// End of the info records
 			headerRecords.Add(new DictionaryTerminationRecord());
-
+			
 			// Write all of header, variable and info records
 			foreach (var headerRecord in headerRecords)
 			{
 				headerRecord.WriteRecord(_writer);
 			}
-            
+
             if (_compress)
             {
                 _recordWriter = new CompressedRecordWriter(_writer, _bias, double.MinValue);
@@ -170,8 +175,6 @@ namespace Curiosity.SPSS.FileParser
 		{
 			_writer.Flush();
 			_writer.Close();
-
-			_output.Flush();
 
             if (!_leaveOpen)
             {

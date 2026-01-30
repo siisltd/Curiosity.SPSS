@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.2] - 2026-01-30
+
+### Added
+
+- Multiple Response Sets Records. Version before 14.
+
 ## [1.2.2] - 2023-11-13
 
 ### Fixed
