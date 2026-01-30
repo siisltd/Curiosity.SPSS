@@ -53,7 +53,7 @@ namespace Curiosity.SPSS.Tests
 
             using (FileStream fileStream = new FileStream(filename, FileMode.Create, FileAccess.Write))
             {
-                using (var writer = new SpssWriter(fileStream, variables, options))
+                using (var writer = new SpssWriter(fileStream, variables, Array.Empty<Mrset>(), options))
                 {
                     var newRecord = writer.CreateRecord();
                     newRecord[0] = 15d;
@@ -170,7 +170,7 @@ namespace Curiosity.SPSS.Tests
 
             using (FileStream fileStream = new FileStream(filename, FileMode.Create, FileAccess.Write))
             {
-                using (var writer = new SpssWriter(fileStream, variables, options))
+                using (var writer = new SpssWriter(fileStream, variables, Array.Empty<Mrset>(), options))
                 {
                     // If the data record is not readly available, you can use: object[] newRecord = writer.CreateRecord();
                     foreach (var row in data)
@@ -254,7 +254,7 @@ namespace Curiosity.SPSS.Tests
 
             using (FileStream writeFileStream = new FileStream(filename, FileMode.Create, FileAccess.Write))
             {
-                using (var writer = new SpssWriter(writeFileStream, variables, options))
+                using (var writer = new SpssWriter(writeFileStream, variables, Array.Empty<Mrset>(), options))
                 {
                     var newRecord = writer.CreateRecord();
                     // Exactly 500
@@ -307,7 +307,7 @@ namespace Curiosity.SPSS.Tests
                 };
                 using (FileStream fileStream = new FileStream(filename, FileMode.Create, FileAccess.Write))
                 {
-                    using (new SpssWriter(fileStream, variables))
+                    using (new SpssWriter(fileStream, variables, Array.Empty<Mrset>()))
                     {
                     }
                 }
@@ -330,7 +330,7 @@ namespace Curiosity.SPSS.Tests
 
                 using (FileStream fileStream = new FileStream(filename, FileMode.Create, FileAccess.Write))
                 {
-                    using (new SpssWriter(fileStream, variables))
+                    using (new SpssWriter(fileStream, variables, Array.Empty<Mrset>()))
                     {
                     }
                 }
@@ -411,7 +411,7 @@ namespace Curiosity.SPSS.Tests
 
                 var options = new SpssOptions();
 
-                using (var writer = new SpssWriter(fileStream, variables, options))
+                using (var writer = new SpssWriter(fileStream, variables, Array.Empty<Mrset>(), options))
                 {
                     object[] newRecord = writer.CreateRecord();
                     newRecord[0] = "test";
