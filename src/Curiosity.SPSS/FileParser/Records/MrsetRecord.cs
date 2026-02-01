@@ -13,10 +13,10 @@ namespace Curiosity.SPSS.FileParser.Records
 
         private byte[] Data { get; set; }
         
-        public MrsetRecord(Encoding encoding, Mrset mrset)
+        public MrsetRecord(Encoding encoding, Mrset mrset, Dictionary<string, VariableRecord> variableRecords)
         {
             Encoding = encoding;
-            Data = BuildMrset(mrset, Encoding);
+            Data = BuildMrset(mrset, variableRecords, Encoding);
             ItemCount = Data.Length;
             ItemSize = 1;
         } 
@@ -30,8 +30,8 @@ namespace Curiosity.SPSS.FileParser.Records
         {
             
         }
-
-        private static byte[] BuildMrset(Mrset mrset, Encoding encoding)
+        
+        private static byte[] BuildMrset(Mrset mrset, Dictionary<string, VariableRecord> variableRecords, Encoding encoding)
         {
             var data = new List<byte>();
             var spaceBytes = encoding.GetBytes(" ");
@@ -68,7 +68,15 @@ namespace Curiosity.SPSS.FileParser.Records
             data.AddRange(label);
             
             data.AddRange(spaceBytes);
-            data.AddRange(encoding.GetBytes(string.Join(" ", mrset.Variables.Select(x => x.Name))));
+
+            foreach (var variable in mrset.Variables)
+            {
+                data.AddRange(encoding.GetBytes(variableRecords[variable.Name].Name.ToLower()));
+                if (variable != mrset.Variables.Last())
+                {
+                    data.AddRange(spaceBytes);
+                }
+            }
             data.Add(0x0a);
             
             return data.ToArray();

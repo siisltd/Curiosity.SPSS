@@ -5,6 +5,7 @@ using Curiosity.SPSS.DataReader;
 using Curiosity.SPSS.SpssDataset;
 using FluentAssertions;
 using Xunit;
+using Record = Xunit.Record;
 
 namespace Curiosity.SPSS.Tests
 {
@@ -73,6 +74,72 @@ namespace Curiosity.SPSS.Tests
 
             varCount.Should().Be(2, "Variable count does not match");
             rowCount.Should().Be(2, "Rows count does not match");
+        }
+
+        [Fact]
+        public void TestWriteNumbersWith_Mrset_Dichotomy_VariableLabels()
+        {
+            var filename = @"TestFiles/testWriteNumbersMrsetDVL.sav";
+
+            var variables = new List<Variable>
+            {
+                new Variable("avariablename_01")
+                {
+                    Label = "The variable Label",
+                    ValueLabels = new Dictionary<double, string>
+                    {
+                        {1, "Label for 1"},
+                        {2, "Label for 2"},
+                    },
+                    PrintFormat = new OutputFormat(FormatType.F, 8, 2),
+                    WriteFormat = new OutputFormat(FormatType.F, 8, 2),
+                    Type = DataType.Numeric,
+                    Width = 10,
+                    MissingValueType = MissingValueType.OneDiscreteMissingValue
+                },
+                new Variable("avariablename_02")
+                {
+                    Label = "Another variable",
+                    ValueLabels = new Dictionary<double, string>
+                    {
+                        {1, "this is 1"},
+                        {2, "this is 2"},
+                    },
+                    PrintFormat = new OutputFormat(FormatType.F, 8, 2),
+                    WriteFormat = new OutputFormat(FormatType.F, 8, 2),
+                    Type = DataType.Numeric,
+                    Width = 10,
+                    MissingValueType = MissingValueType.OneDiscreteMissingValue
+                }
+            };
+            variables[0].MissingValues[0] = 999;
+            variables[1].MissingValues[0] = 999;
+
+            var options = new SpssOptions();
+
+            var mrset = new Mrset("test", "sometext", variables);
+            
+            mrset.SetVariableLabels_LabelsSource(1);
+            var exception = Record.Exception(() =>
+            {
+                using (FileStream fileStream = new FileStream(filename, FileMode.Create, FileAccess.Write))
+                {
+                    using (var writer = new SpssWriter(fileStream, variables, new [] {mrset}, options))
+                    {
+                        var newRecord = writer.CreateRecord();
+                        newRecord[0] = 15d;
+                        newRecord[1] = 15.5d;
+                        writer.WriteRecord(newRecord);
+                        newRecord = writer.CreateRecord();
+                        newRecord[0] = null;
+                        newRecord[1] = 200d;
+                        writer.WriteRecord(newRecord);
+                        writer.EndFile();
+                    }
+                }
+            });
+
+            Assert.Null(exception);
         }
 
         [Fact]

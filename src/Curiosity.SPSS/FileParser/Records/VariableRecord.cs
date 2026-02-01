@@ -192,7 +192,7 @@ namespace Curiosity.SPSS.FileParser.Records
                 {
                     result[i] = dummyVar;
                 }
-
+                
                 currentSegment++;
                 var segmentsLeft = segments - currentSegment;
 
