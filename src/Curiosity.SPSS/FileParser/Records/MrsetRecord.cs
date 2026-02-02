@@ -13,10 +13,10 @@ namespace Curiosity.SPSS.FileParser.Records
 
         private byte[] Data { get; set; }
         
-        public MrsetRecord(Encoding encoding, Mrset mrset, Dictionary<string, VariableRecord> variableRecords)
+        public MrsetRecord(Encoding encoding, Mrset[] mrsets, Dictionary<string, VariableRecord> variableRecords)
         {
             Encoding = encoding;
-            Data = BuildMrset(mrset, variableRecords, Encoding);
+            Data = BuildMrset(mrsets, variableRecords, Encoding);
             ItemCount = Data.Length;
             ItemSize = 1;
         } 
@@ -31,54 +31,57 @@ namespace Curiosity.SPSS.FileParser.Records
             
         }
         
-        private static byte[] BuildMrset(Mrset mrset, Dictionary<string, VariableRecord> variableRecords, Encoding encoding)
+        private static byte[] BuildMrset(Mrset[] mrsets, Dictionary<string, VariableRecord> variableRecords, Encoding encoding)
         {
             var data = new List<byte>();
-            var spaceBytes = encoding.GetBytes(" ");
-
-            data.AddRange(encoding.GetBytes($"${mrset.Name}"));
-            data.AddRange(encoding.GetBytes("="));
-            
-            
-            switch (mrset.MrsetType)
+            foreach (var mrset in mrsets)
             {
-                case MrsetType.Category:
-                    data.AddRange(encoding.GetBytes("C"));
-                    data.AddRange(spaceBytes);
-                    break;
-                case MrsetType.Dichotomy when mrset.CategoryLabelsSource == CategoryLabelsSources.VariableLabels:
-                    data.AddRange(encoding.GetBytes("D"));
-                    var countedValueLength = encoding.GetBytes(mrset.CountedValue.ToString().Length.ToString());
-                    data.AddRange(countedValueLength);
-                    data.AddRange(spaceBytes);
-                    data.AddRange(encoding.GetBytes(mrset.CountedValue.ToString()));
-                    data.AddRange(spaceBytes);
+                var spaceBytes = encoding.GetBytes(" ");
 
-                    break;
-                case MrsetType.Dichotomy when mrset.CategoryLabelsSource == CategoryLabelsSources.LabelsOfCountedValue:
-                    throw new NotImplementedException("Is not implemented in the current version of SPSSlib");
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+                data.AddRange(encoding.GetBytes($"${mrset.Name}"));
+                data.AddRange(encoding.GetBytes("="));
             
             
-            var label = encoding.GetBytes(mrset.Label);
-            data.AddRange(encoding.GetBytes(label.Length.ToString()));
-            data.AddRange(spaceBytes);
-            data.AddRange(label);
-            
-            data.AddRange(spaceBytes);
-
-            foreach (var variable in mrset.Variables)
-            {
-                data.AddRange(encoding.GetBytes(variableRecords[variable.Name].Name.ToLower()));
-                if (variable != mrset.Variables.Last())
+                switch (mrset.MrsetType)
                 {
-                    data.AddRange(spaceBytes);
+                    case MrsetType.Category:
+                        data.AddRange(encoding.GetBytes("C"));
+                        data.AddRange(spaceBytes);
+                        break;
+                    case MrsetType.Dichotomy when mrset.CategoryLabelsSource == CategoryLabelsSources.VariableLabels:
+                        data.AddRange(encoding.GetBytes("D"));
+                        var countedValueLength = encoding.GetBytes(mrset.CountedValue.ToString().Length.ToString());
+                        data.AddRange(countedValueLength);
+                        data.AddRange(spaceBytes);
+                        data.AddRange(encoding.GetBytes(mrset.CountedValue.ToString()));
+                        data.AddRange(spaceBytes);
+
+                        break;
+                    case MrsetType.Dichotomy when mrset.CategoryLabelsSource == CategoryLabelsSources.LabelsOfCountedValue:
+                        throw new NotImplementedException("Is not implemented in the current version of SPSSlib");
+                    default:
+                        throw new ArgumentOutOfRangeException();
                 }
-            }
-            data.Add(0x0a);
             
+            
+                var label = encoding.GetBytes(mrset.Label);
+                data.AddRange(encoding.GetBytes(label.Length.ToString()));
+                data.AddRange(spaceBytes);
+                data.AddRange(label);
+            
+                data.AddRange(spaceBytes);
+
+                foreach (var variable in mrset.Variables)
+                {
+                    data.AddRange(encoding.GetBytes(variableRecords[variable.Name].Name.ToLower()));
+                    if (variable != mrset.Variables.Last())
+                    {
+                        data.AddRange(spaceBytes);
+                    }
+                }
+                data.Add(0x0a);
+                
+            }
             return data.ToArray();
         }
     }

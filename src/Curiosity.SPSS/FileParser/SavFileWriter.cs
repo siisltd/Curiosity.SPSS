@@ -172,11 +172,7 @@ namespace Curiosity.SPSS.FileParser
 				}
 			}
 
-			foreach (var mrset in _mrsets)
-			{
-				mrsetRecords.Add(new MrsetRecord(_options.DataEncoding, mrset, variableRecordsByVariableName));
-			}
-			
+			mrsetRecords.Add(new MrsetRecord(_options.DataEncoding, _mrsets, variableRecordsByVariableName));
 		}
 
 	    private class ByteArrayComparer : IComparer<byte[]>

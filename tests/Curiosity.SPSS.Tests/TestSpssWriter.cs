@@ -117,14 +117,18 @@ namespace Curiosity.SPSS.Tests
 
             var options = new SpssOptions();
 
-            var mrset = new Mrset("test", "sometext", variables);
-            
+            var mrset = new Mrset("test", "", variables);
             mrset.SetVariableLabels_LabelsSource(1);
+            
+            var mrset2 = new Mrset("test2", "", variables);
+            mrset2.SetVariableLabels_LabelsSource(1);
+            
+            
             var exception = Record.Exception(() =>
             {
                 using (FileStream fileStream = new FileStream(filename, FileMode.Create, FileAccess.Write))
                 {
-                    using (var writer = new SpssWriter(fileStream, variables, new [] {mrset}, options))
+                    using (var writer = new SpssWriter(fileStream, variables, new [] {mrset, mrset2}, options))
                     {
                         var newRecord = writer.CreateRecord();
                         newRecord[0] = 15d;
