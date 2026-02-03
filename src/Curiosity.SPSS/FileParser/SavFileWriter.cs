@@ -187,8 +187,6 @@ namespace Curiosity.SPSS.FileParser
 
 	    public void Dispose()
 		{
-			_output.Flush();
-			
 			_writer.Flush();
 			_writer.Close();
 			
