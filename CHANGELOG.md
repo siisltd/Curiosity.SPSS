@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.0] - 2026-01-30
+
+### Added
+
+- Added support for writing Multuple Response Sets (MRSETS) with header subtype 7 supported by SPSS before version 14.
+
 ## [1.2.2] - 2023-11-13
 
 ### Fixed

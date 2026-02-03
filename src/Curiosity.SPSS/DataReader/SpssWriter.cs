@@ -18,6 +18,7 @@ namespace Curiosity.SPSS.DataReader
         
         // TODO use read only collection and make it public
 		private readonly ICollection<Variable> _variables;
+		private readonly IEnumerable<Mrset> _mrsets;
 
         /// <summary>
         /// Creates a spss writer
@@ -29,21 +30,25 @@ namespace Curiosity.SPSS.DataReader
         public SpssWriter(
 	        Stream output, 
 	        ICollection<Variable> variables,
+	        IEnumerable<Mrset> mrsets,
 	        SpssOptions? options = null,
 	        bool leaveOpen = false)
 			: this(
 				new SavFileWriter(output, leaveOpen),
 				variables,
+				mrsets,
 				options) { }
          
 		private SpssWriter(
 			SavFileWriter output,
 			ICollection<Variable> variables,
+			IEnumerable<Mrset> mrsets,
 			SpssOptions? options = null)
         {
 			_output = output;
 			_variables = variables.ToList();
             _options = options ?? _options;
+            _mrsets =  mrsets;
 			WriteFileHeader();
 		}
 
@@ -96,7 +101,7 @@ namespace Curiosity.SPSS.DataReader
 
 		private void WriteFileHeader()
 		{
-			_output.WriteFileHeader(_options, _variables);
+			_output.WriteFileHeader(_options, _variables, _mrsets);
 		}
 
         /// <summary>

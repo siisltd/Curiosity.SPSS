@@ -1,5 +1,7 @@
+using System;
 using System.IO;
 using Curiosity.SPSS.DataReader;
+using Curiosity.SPSS.SpssDataset;
 using Xunit;
 
 namespace Curiosity.SPSS.Tests
@@ -18,7 +20,7 @@ namespace Curiosity.SPSS.Tests
                 {
                     SpssReader spssDataset = new SpssReader(fileStream);
 
-                    SpssWriter spssWriter = new SpssWriter(writeStream, spssDataset.Variables);
+                    SpssWriter spssWriter = new SpssWriter(writeStream, spssDataset.Variables, Array.Empty<Mrset>());
 
                     foreach (var record in spssDataset.Records)
                     {

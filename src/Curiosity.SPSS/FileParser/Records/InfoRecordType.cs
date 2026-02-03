@@ -6,7 +6,7 @@
         public const int MachineFloatingPoint = 4;
         public const int GroupedVariables = 5;              // not sure, not implemented
         public const int DateInfo = 6;                      // not sure, not implemented
-        public const int MultipleResponseSets = 7;          // TODO implement may be?
+        public const int MultipleResponseSets = 7;
         public const int VariableDisplayParameter = 11;     // TODO implement writing
         public const int LongVariableNames = 13;
         public const int VeryLongString = 14;         // TODO implement, VLS vars might look like multiple vars, find what should happend with variable indexes

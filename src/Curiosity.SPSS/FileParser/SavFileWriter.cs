@@ -13,6 +13,7 @@ namespace Curiosity.SPSS.FileParser
 		private readonly Stream _output;
 		private readonly BinaryWriter _writer;
 		private Variable[] _variables;
+		private Mrset[] _mrsets;
 		private IRecordWriter _recordWriter;
 		private long _bias;
 		private bool _compress;
@@ -28,12 +29,13 @@ namespace Curiosity.SPSS.FileParser
 			_writer = new BinaryWriter(_output, Constants.BaseEncoding, leaveOpen);
 		}
 		 
-	    public void WriteFileHeader(SpssOptions options, IEnumerable<Variable> variables)
+	    public void WriteFileHeader(SpssOptions options, IEnumerable<Variable> variables, IEnumerable<Mrset> mrsets)
 		{
 		    _options = options;
 			_compress = options.Compressed;
 			_bias = options.Bias;
 			_variables = variables.ToArray();
+			_mrsets = mrsets.ToArray();
 
             // SPSS file header
             var headerRecords = new List<IRecord>
@@ -44,8 +46,9 @@ namespace Curiosity.SPSS.FileParser
 	        // Process all variable info
 			var variableLongNames = new Dictionary<string, string>();
             var veryLongStrings = new Dictionary<string, int>();
+            var mrsetRecords = new List<MrsetRecord>();
 	        var displayInfoList = new List<VariableDisplayInfo>(_variables.Length);
-            SetVariables(headerRecords, variableLongNames, veryLongStrings, displayInfoList);
+            SetVariables(headerRecords, variableLongNames, veryLongStrings, displayInfoList, mrsetRecords);
             
 			// Integer & encoding info
 			var intInfoRecord = new MachineIntegerInfoRecord(_options.HeaderEncoding);
@@ -55,6 +58,8 @@ namespace Curiosity.SPSS.FileParser
             var fltInfoRecord = new MachineFloatingPointInfoRecord();
             headerRecords.Add(fltInfoRecord);
 
+            headerRecords.AddRange(mrsetRecords);
+            
             // Variable Display info, beware that the number of variables here must match the count of named variables 
             // (exclude the string continuation, include VLS segments)
 	        var varDisplRecord = new VariableDisplayParameterRecord(displayInfoList.Count);
@@ -83,13 +88,13 @@ namespace Curiosity.SPSS.FileParser
 			
 			// End of the info records
 			headerRecords.Add(new DictionaryTerminationRecord());
-
+			
 			// Write all of header, variable and info records
 			foreach (var headerRecord in headerRecords)
 			{
 				headerRecord.WriteRecord(_writer);
 			}
-            
+
             if (_compress)
             {
                 _recordWriter = new CompressedRecordWriter(_writer, _bias, double.MinValue);
@@ -102,13 +107,18 @@ namespace Curiosity.SPSS.FileParser
             _stringWriter = new StringWriter(_options.DataEncoding, _recordWriter);
 		}
 
-        private void SetVariables(List<IRecord> headerRecords, IDictionary<string, string> variableLongNames, IDictionary<string, int> veryLongStrings, List<VariableDisplayInfo> displayInfoList)
+        private void SetVariables(
+	        List<IRecord> headerRecords, 
+	        IDictionary<string, string> variableLongNames, 
+	        IDictionary<string, int> veryLongStrings, 
+	        List<VariableDisplayInfo> displayInfoList,
+	        List<MrsetRecord> mrsetRecords)
 		{
 			var variableRecords = new List<VariableRecord>(_variables.Length);
             var valueLabels = new List<ValueLabel>(_variables.Length);
 
             // Read the variables and create the needed records
-            ProcessVariables(variableLongNames, veryLongStrings, variableRecords, valueLabels);
+            ProcessVariables(variableLongNames, veryLongStrings, variableRecords, valueLabels, mrsetRecords);
 			headerRecords.AddRange(variableRecords);
 			
 			// Set the count of variables as "nominal case size" on the HeaderRecord
@@ -129,22 +139,29 @@ namespace Curiosity.SPSS.FileParser
 									.Select(vl => new ValueLabelRecord(vl, _options.HeaderEncoding)));
 		}
 
-        private void ProcessVariables(IDictionary<string, string> variableLongNames, IDictionary<string, int> veryLongStrings, List<VariableRecord> variableRecords, List<ValueLabel> valueLabels)
+        private void ProcessVariables(
+	        IDictionary<string, string> variableLongNames, 
+	        IDictionary<string, int> veryLongStrings, 
+	        List<VariableRecord> variableRecords, 
+	        List<ValueLabel> valueLabels,
+	        List<MrsetRecord> mrsetRecords)
 		{
             int longNameCounter = 0;
             var namesList = new SortedSet<byte[]>(new ByteArrayComparer());
             var segmentsNamesList = new SortedList<byte[], int>(new ByteArrayComparer());
 
+            var variableRecordsByVariableName = new Dictionary<string, VariableRecord>();
             foreach (var variable in _variables)
 			{
 				int dictionaryIndex = variableRecords.Count + 1;
 
                 var records = VariableRecord.GetNeededVariables(variable, _options.HeaderEncoding, namesList, ref longNameCounter, veryLongStrings, segmentsNamesList);
-				variableRecords.AddRange(records);
+                
+                variableRecords.AddRange(records);
 
                 // Even if the variable name is the same, it still needs a long record indicator otherwise SPSS doesn't know how to handle it.
 				variableLongNames.Add(records[0].Name, variable.Name);
-
+				variableRecordsByVariableName.Add(variable.Name, records[0]);
 				// TODO Avoid repeating the same valueLabels on the file
 				// Add ValueLabels if necesary
 				if (variable.ValueLabels != null && variable.ValueLabels.Any())
@@ -154,6 +171,8 @@ namespace Curiosity.SPSS.FileParser
 					valueLabels.Add(valueLabel);
 				}
 			}
+
+			mrsetRecords.Add(new MrsetRecord(_options.DataEncoding, _mrsets, variableRecordsByVariableName));
 		}
 
 	    private class ByteArrayComparer : IComparer<byte[]>
@@ -170,9 +189,7 @@ namespace Curiosity.SPSS.FileParser
 		{
 			_writer.Flush();
 			_writer.Close();
-
-			_output.Flush();
-
+			
             if (!_leaveOpen)
             {
                 _output.Dispose();
