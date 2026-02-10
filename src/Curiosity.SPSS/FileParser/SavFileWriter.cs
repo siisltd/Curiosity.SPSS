@@ -46,9 +46,8 @@ namespace Curiosity.SPSS.FileParser
 	        // Process all variable info
 			var variableLongNames = new Dictionary<string, string>();
             var veryLongStrings = new Dictionary<string, int>();
-            var mrsetRecords = new List<MrsetRecord>();
 	        var displayInfoList = new List<VariableDisplayInfo>(_variables.Length);
-            SetVariables(headerRecords, variableLongNames, veryLongStrings, displayInfoList, mrsetRecords);
+            SetVariables(headerRecords, variableLongNames, veryLongStrings, displayInfoList, out var mrsetRecord);
             
 			// Integer & encoding info
 			var intInfoRecord = new MachineIntegerInfoRecord(_options.HeaderEncoding);
@@ -58,7 +57,10 @@ namespace Curiosity.SPSS.FileParser
             var fltInfoRecord = new MachineFloatingPointInfoRecord();
             headerRecords.Add(fltInfoRecord);
 
-            headerRecords.AddRange(mrsetRecords);
+            if (mrsetRecord != null)
+            {
+				headerRecords.Add(mrsetRecord);
+            }
             
             // Variable Display info, beware that the number of variables here must match the count of named variables 
             // (exclude the string continuation, include VLS segments)
@@ -112,13 +114,13 @@ namespace Curiosity.SPSS.FileParser
 	        IDictionary<string, string> variableLongNames, 
 	        IDictionary<string, int> veryLongStrings, 
 	        List<VariableDisplayInfo> displayInfoList,
-	        List<MrsetRecord> mrsetRecords)
+	        out MrsetRecord? mrsetRecord)
 		{
 			var variableRecords = new List<VariableRecord>(_variables.Length);
             var valueLabels = new List<ValueLabel>(_variables.Length);
 
             // Read the variables and create the needed records
-            ProcessVariables(variableLongNames, veryLongStrings, variableRecords, valueLabels, mrsetRecords);
+            ProcessVariables(variableLongNames, veryLongStrings, variableRecords, valueLabels, out mrsetRecord);
 			headerRecords.AddRange(variableRecords);
 			
 			// Set the count of variables as "nominal case size" on the HeaderRecord
@@ -144,7 +146,7 @@ namespace Curiosity.SPSS.FileParser
 	        IDictionary<string, int> veryLongStrings, 
 	        List<VariableRecord> variableRecords, 
 	        List<ValueLabel> valueLabels,
-	        List<MrsetRecord> mrsetRecords)
+	        out MrsetRecord? mrsetRecord)
 		{
             int longNameCounter = 0;
             var namesList = new SortedSet<byte[]>(new ByteArrayComparer());
@@ -172,7 +174,9 @@ namespace Curiosity.SPSS.FileParser
 				}
 			}
 
-			mrsetRecords.Add(new MrsetRecord(_options.DataEncoding, _mrsets, variableRecordsByVariableName));
+			mrsetRecord = _mrsets.Any() 
+				? new MrsetRecord(_options.DataEncoding, _mrsets, variableRecordsByVariableName)
+				: null;
 		}
 
 	    private class ByteArrayComparer : IComparer<byte[]>
