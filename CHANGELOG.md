@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.1] - 2026-02-3010
+
+### Fixed
+
+- Fixed writing a .sav file with empty mrsets list
+
 ## [1.3.0] - 2026-01-30
 
 ### Added
