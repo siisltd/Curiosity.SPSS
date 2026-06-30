@@ -239,7 +239,7 @@ namespace Curiosity.SPSS.FileParser.Records
 
         private static int GetDisplayInfoWith(Variable variable)
         {
-            if (variable.TextWidth > 0)
+            if (variable.Width > 0)
             {
                 return variable.Width;
             }

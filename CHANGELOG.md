@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.2] - 2026-06-30
+
+### Fixed
+
+- Bug fix: The function that calculates the displayed width of columns has been corrected.
+
 ## [1.3.1] - 2026-02-10
 
 ### Fixed
