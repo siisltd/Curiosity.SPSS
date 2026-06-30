@@ -10,9 +10,9 @@
     <PackageTags>siisltd; infrastructure; utils; sav; spss; spsslib; statistics; curiosity</PackageTags>
     <Language>English</Language>
 
-    <PackageVersion>1.3.1</PackageVersion>
-    <AssemblyVersion>1.3.1</AssemblyVersion>
-    <FileVersion>1.3.1</FileVersion>
+    <PackageVersion>1.3.2</PackageVersion>
+    <AssemblyVersion>1.3.2</AssemblyVersion>
+    <FileVersion>1.3.2</FileVersion>
 
     <Authors>TNS / SIIS Ltd (Maxim Markelow (@markeli), Andrei Vinogradov, Stepan Sazykin)</Authors>
     <Company>SIIS Ltd</Company>
