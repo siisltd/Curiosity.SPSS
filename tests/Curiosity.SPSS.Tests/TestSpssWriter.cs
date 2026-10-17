@@ -504,6 +504,60 @@ namespace Curiosity.SPSS.Tests
             rowCount.Should().Be(1, "Rows count does not match");
         }
 
+        [Fact]
+        public void TestWriteManyLongStringVarsWithSamePrefix()
+        {
+            // Each variable takes 130 continuation segments, all of them share the "STRIN" prefix,
+            // so the 999 segment numbers of the prefix are not enough for all variables
+            const int variablesCount = 10;
+            const int textWidth = 32767;
+
+            var variables = new List<Variable>();
+            for (var i = 0; i < variablesCount; i++)
+            {
+                variables.Add(new Variable($"stringvar_{i:00}")
+                {
+                    Label = "This is a string variable",
+                    Type = DataType.Text,
+                    TextWidth = textWidth
+                });
+            }
+
+            var value = new string('a', textWidth);
+
+            var stream = new MemoryStream();
+            using (var writer = new SpssWriter(stream, variables, Array.Empty<Mrset>(), new SpssOptions(), leaveOpen: true))
+            {
+                var newRecord = writer.CreateRecord();
+                newRecord[variablesCount - 1] = value;
+                writer.WriteRecord(newRecord);
+                writer.EndFile();
+            }
+
+            stream.Position = 0;
+
+            var variableValidators = new Dictionary<int, Action<int, Variable>>();
+            for (var i = 0; i < variablesCount; i++)
+            {
+                var expectedName = variables[i].Name;
+                variableValidators.Add(i, (index, variable) =>
+                {
+                    variable.Name.Should().Be(expectedName);
+                    variable.TextWidth.Should().Be(textWidth);
+                });
+            }
+
+            TestSpssReader.ReadData(stream, out var varCount, out var rowCount,
+                variableValidators,
+                new Dictionary<int, Action<int, int, Variable, object>>
+                {
+                    {variablesCount - 1, (r, c, variable, readValue) => readValue.Should().Be(value)}
+                });
+
+            varCount.Should().Be(variablesCount, "Variable count does not match");
+            rowCount.Should().Be(1, "Rows count does not match");
+        }
+
         private static void ReadFile(string filename, out int varCount, out int rowCount)
         {
             FileStream readFileStream = new FileStream(filename, FileMode.Open, FileAccess.Read,

@@ -21,6 +21,11 @@ namespace Curiosity.SPSS.FileParser.Records
         /// </summary>
         private static readonly char[] AppendableChars = Enumerable.Range('A', 'Z').Select(i => (char)i).ToArray();
 
+        /// <summary>
+        /// Max number appended to the 5 byte prefix of a VLS continuation segment name (the number takes 3 bytes)
+        /// </summary>
+        private const int MaxSegmentNumber = 999;
+
 		public RecordType RecordType => RecordType.VariableRecord;
         public int Type { get; private set; }
         public bool HasVariableLabel { get; private set; }
@@ -139,6 +144,17 @@ namespace Curiosity.SPSS.FileParser.Records
             var originalName = header._nameRaw;
 
             CheckShortName(header, previousVariableNames, ref longNameCounter);
+
+            // Segment numbers are shared by all variables with the same first 5 bytes of the name.
+            // If they are not enough for this variable, give it a generated short name with its own numbering.
+            if (variable.Type == DataType.Text
+                && !HasFreeSegmentNumbers(originalName, GetLongStringSegmentsCount(variable.TextWidth) - 1, segmentsNamesList))
+            {
+                previousVariableNames.Remove(header._nameRaw);
+                SetGeneratedShortName(header, previousVariableNames, ref longNameCounter);
+                previousVariableNames.Add(header._nameRaw);
+                originalName = header._nameRaw;
+            }
 
             // Set output format for text variables to be equal to textwidth
             // Also detect if a variable is extra wide and needs to be cut up over multiple variables (long string variables)
@@ -355,19 +371,66 @@ namespace Curiosity.SPSS.FileParser.Records
             // Check if it's already on the variable records names (compare with raw encoded name byte array)
             if (previousVariableNames.Contains(variable._nameRaw))
             {
-                // Algorithm to create a variable with a short name.
-                // As produced by "IBM SPSS STATISTICS 64-bit MS Windows 22.0.0.0"
-                var currentLongNameIndex = ++longNameCounter;
-
-                // Avoid collisions in case there is already a var called VXX_A
-                var appendCharIndex = 0;
-                do
-                {
-                    variable.Name = $"V{currentLongNameIndex}_{AppendableChars[appendCharIndex++]}";
-                } while (previousVariableNames.Contains(variable._nameRaw));
+                SetGeneratedShortName(variable, previousVariableNames, ref longNameCounter);
             }
             // Add the raw encoded name byte array to avoid collitions in following variables
             previousVariableNames.Add(variable._nameRaw);
+        }
+
+        /// <summary>
+        /// Sets a generated short name like VXX_A that is not used by previous variables.
+        /// </summary>
+        private static void SetGeneratedShortName(VariableRecord variable, SortedSet<byte[]> previousVariableNames, ref int longNameCounter)
+        {
+            // Algorithm to create a variable with a short name.
+            // As produced by "IBM SPSS STATISTICS 64-bit MS Windows 22.0.0.0"
+            var currentLongNameIndex = ++longNameCounter;
+
+            // Avoid collisions in case there is already a var called VXX_A
+            var appendCharIndex = 0;
+            do
+            {
+                variable.Name = $"V{currentLongNameIndex}_{AppendableChars[appendCharIndex++]}";
+            } while (previousVariableNames.Contains(variable._nameRaw));
+        }
+
+        /// <summary>
+        /// Checks if there are enough unused segment numbers left for the 5 byte prefix of the name.
+        /// </summary>
+        private static bool HasFreeSegmentNumbers(byte[] name, int neededCount, SortedList<byte[], int> segmentsNamesList)
+        {
+            if (neededCount <= 0)
+                return true;
+
+            var lastUsedNumber = segmentsNamesList.TryGetValue(GetSegmentNamesKey(name), out var number)
+                ? number
+                : -1;
+
+            return lastUsedNumber + neededCount <= MaxSegmentNumber;
+        }
+
+        /// <summary>
+        /// Gets the length of the name part kept in the segment names: up to the first space, but no more than 5 bytes.
+        /// </summary>
+        private static int GetSegmentNamePrefixLength(byte[] name)
+        {
+            var nameEndIndex = Array.IndexOf<byte>(name, 0x20);
+            if (nameEndIndex == -1 || nameEndIndex > 5)
+            {
+                nameEndIndex = 5;
+            }
+
+            return nameEndIndex;
+        }
+
+        /// <summary>
+        /// Gets the key for the segment numbers cache: the name prefix padded with zeros to 5 bytes.
+        /// </summary>
+        private static byte[] GetSegmentNamesKey(byte[] name)
+        {
+            var key = new byte[5];
+            Array.Copy(name, key, GetSegmentNamePrefixLength(name));
+            return key;
         }
 
         
@@ -390,15 +453,10 @@ namespace Curiosity.SPSS.FileParser.Records
             var segmentName = (byte[])variable.Clone();
             
             // Find out the ending position of the name, or cut it to 5
-            var nameEndIndex = Array.IndexOf<byte>(segmentName, 0x20);
-            if (nameEndIndex == -1 || nameEndIndex > 5)
-            {
-                nameEndIndex = 5;
-            }
+            var nameEndIndex = GetSegmentNamePrefixLength(segmentName);
 
             // Get the short name (of up to 5 chars) to use as key for the numeration cache
-            byte[] shortSegmentName = new byte[5];
-            Array.Copy(segmentName, shortSegmentName, nameEndIndex);
+            var shortSegmentName = GetSegmentNamesKey(segmentName);
 
             // Get the current number for the short name from the cache, or start by 0
             int segmentContinuationNumber;
@@ -414,7 +472,7 @@ namespace Curiosity.SPSS.FileParser.Records
                 segmentContinuationNumber++;
                 var numberBytes = Encoding.ASCII.GetBytes(segmentContinuationNumber.ToString().PadRight(3));
 
-                if (numberBytes.Length > 3)
+                if (segmentContinuationNumber > MaxSegmentNumber)
                 {
                     throw new SpssFileFormatException(
                         "There can be no more than 999 segment continuation variables with se same 5 letter name");

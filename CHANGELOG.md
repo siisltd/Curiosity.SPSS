@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.3] - 2026-10-17
+
+### Fixed
+
+- Fixed `SpssFileFormatException` "There can be no more than 999 segment continuation variables with se same 5 letter name" when very long string variables with the same first 5 bytes of the name need more than 999 continuation segments in total: such a variable now gets a generated short name with its own segment numbering.
+
 ## [1.3.2] - 2026-06-30
 
 ### Fixed
